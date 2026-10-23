@@ -1,26 +1,270 @@
 @import "tailwindcss";
 
+@theme {
+  --color-ink: #050505;
+  --color-carbon: #0b0c0f;
+  --color-graphite: #17191d;
+  --color-silver: #c7cbd1;
+  --color-paper: #f5f5f5;
+  --color-muted: #858a94;
+  --color-crimson: #ff263b;
+  --color-amber: #e7a56b;
+
+  --font-sans: var(--font-jost), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --ease-cine: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --gutter: clamp(1.25rem, 5vw, 5.5rem);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+html {
+  background: var(--color-ink);
+  color-scheme: dark;
+  -webkit-text-size-adjust: 100%;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html:has(dialog[open]) {
+  overflow: hidden;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-ink);
+  color: var(--color-silver);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+main {
+  overflow-x: clip;
+}
+
+::selection {
+  background: var(--color-crimson);
+  color: var(--color-paper);
+}
+
+:focus-visible {
+  outline: 1.5px solid var(--color-crimson);
+  outline-offset: 4px;
+}
+
+img {
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+/* ---------------------------------------------------------------
+   Intro gating: the inline script in <head> adds `.js`. Elements that
+   take part in the load sequence stay hidden until GSAP has written
+   their start states, then `.intro-ready` hands control to GSAP.
+   If JavaScript fails after `.js` is set, the failsafe reveals them.
+---------------------------------------------------------------- */
+.js:not(.intro-ready) [data-intro] {
+  opacity: 0;
+  animation: fizz-failsafe 0.01s linear 3.5s forwards;
+}
+
+@keyframes fizz-failsafe {
+  to {
+    opacity: 1;
+  }
+}
+
+@layer components {
+  .t-display {
+    font-weight: 300;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    line-height: 1.06;
+    color: var(--color-paper);
+  }
+
+  .t-eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    letter-spacing: 0.42em;
+    text-transform: uppercase;
+    color: var(--color-muted);
+  }
+
+  .t-micro {
+    font-family: var(--font-mono);
+    font-size: 0.625rem;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+  }
+
+  .t-copy {
+    font-size: 0.975rem;
+    line-height: 1.8;
+    color: rgb(199 203 209 / 0.8);
+    max-width: 36ch;
+  }
+
+  .t-index {
+    font-weight: 200;
+    font-size: clamp(3.75rem, 8vw, 8.5rem);
+    line-height: 0.8;
+    letter-spacing: 0.04em;
+    color: rgb(133 138 148 / 0.32);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Wraps a line of display type so it can rise out of a mask. */
+  .line-mask {
+    display: block;
+    overflow: hidden;
+    padding-bottom: 0.1em;
+    margin-bottom: -0.1em;
+  }
+
+  .btn-line {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.9rem;
+    border: 1px solid rgb(245 245 245 / 0.22);
+    padding: 0.95rem 1.35rem;
+    font-family: var(--font-mono);
+    font-size: 0.625rem;
+    letter-spacing: 0.32em;
+    text-transform: uppercase;
+    color: var(--color-paper);
+    transition:
+      border-color 0.5s var(--ease-cine),
+      background-color 0.5s var(--ease-cine);
+  }
+
+  .btn-line:hover {
+    border-color: var(--color-crimson);
+    background-color: rgb(255 38 59 / 0.06);
+  }
+
+  .btn-line .arrow {
+    transition: transform 0.5s var(--ease-cine);
+  }
+
+  .btn-line:hover .arrow {
+    transform: translate(3px, -3px);
+  }
+
+  /* Technical callout: a ring, a hairline and a mono label. */
+  .callout-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 9999px;
+    border: 1px solid var(--color-crimson);
+    box-shadow: 0 0 12px rgb(255 38 59 / 0.7);
+    background: rgb(5 5 5 / 0.6);
+  }
+}
+
+@media (min-width: 768px) {
+  .t-display {
+    letter-spacing: 0.3em;
+  }
+}
+
+/* Navigation backdrop appears once the page has scrolled (class set by ScrollTrigger). */
+.is-scrolled [data-nav-bg] {
+  opacity: 1;
+}
+
+/* ---------------------------------------------------------------
+   Hero stage geometry. Each shot is sized to the photo's own aspect
+   ratio (--ar) rather than object-fit: cover, so percentage-based
+   callouts stay locked to features of the car at every viewport.
+   --cx is the car's horizontal centre inside the photo, --fx where
+   that centre should sit on screen.
+---------------------------------------------------------------- */
+.shot {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: var(--color-ink);
+}
+
+.shot-media {
+  --w: max(108vw, var(--hv, 62svh) * var(--ar));
+  position: absolute;
+  width: var(--w);
+  height: calc(var(--w) / var(--ar));
+  left: calc(var(--fx, 0.6) * 100vw - var(--cx, 0.5) * var(--w));
+  top: calc(56svh - var(--w) / var(--ar) / 2);
+  will-change: transform;
+}
+
+/* Feather the photo's top and bottom edges into the ink background. */
+.shot-media::before,
+.shot-media::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 22%;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.shot-media::before {
+  top: -1px;
+  background: linear-gradient(to bottom, var(--color-ink), transparent);
+}
+
+.shot-media::after {
+  bottom: -1px;
+  background: linear-gradient(to top, var(--color-ink), transparent);
+}
+
+@media (max-width: 767px) {
+  .shot-media {
+    --w: 168vw;
+    --fx: 0.5;
+    top: calc(max(56svh, 330px) - var(--w) / var(--ar) / 2);
+  }
+}
+
+.ghost-type {
+  color: transparent;
+  -webkit-text-stroke: 1px rgb(245 245 245 / 0.16);
+}
+
+.grain {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  pointer-events: none;
+  opacity: 0.045;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+}
+
+.tech-grid {
+  background-image:
+    linear-gradient(to right, rgb(199 203 209 / 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(199 203 209 / 0.05) 1px, transparent 1px);
+  background-size: 88px 88px;
+  mask-image: radial-gradient(ellipse at 50% 40%, #000 20%, transparent 75%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@keyframes fizz-nudge {
+  0%,
+  100% {
+    transform: translateY(-2px);
+    opacity: 0.6;
+  }
+  50% {
+    transform: translateY(3px);
+    opacity: 1;
+  }
 }
