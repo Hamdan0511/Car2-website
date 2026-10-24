@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { IBM_Plex_Mono, Jost } from "next/font/google";
+import { INTRO_SEEN_KEY } from "@/lib/driver";
 import "./globals.css";
 
 const jost = Jost({
@@ -28,8 +29,14 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${jost.variable} ${plexMono.variable}`} suppressHydrationWarning>
       <head>
-        {/* Marks JS as available before first paint so intro elements can start hidden. */}
-        <script dangerouslySetInnerHTML={{ __html: "document.documentElement.classList.add('js')" }} />
+        {/* Runs before first paint: marks JS as available, and gives returning visitors a
+            compressed opening (same choreography, --t scales every CSS timing). */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              `var d=document.documentElement;d.classList.add('js');try{if(localStorage.getItem('${INTRO_SEEN_KEY}'))d.style.setProperty('--t','0.4')}catch(e){}`,
+          }}
+        />
       </head>
       <body>{children}</body>
     </html>

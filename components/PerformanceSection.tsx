@@ -3,46 +3,49 @@
 import Image from "next/image";
 import { useRef } from "react";
 import SectionIntro from "@/components/SectionIntro";
-import { gsap, MQ, revealIntro, scrollToTarget, useGSAP } from "@/lib/motion";
+import { MQ, revealIntro, scrollToTarget, useMotion } from "@/lib/motion";
 import { IMAGES } from "@/lib/site";
 
 export default function PerformanceSection() {
   const root = useRef<HTMLElement>(null);
 
-  useGSAP(
-    () => {
-      const q = gsap.utils.selector(root);
-      const mm = gsap.matchMedia();
-      mm.add(MQ.motion, () => {
-        revealIntro(root.current!);
-        const frame = q("[data-frame]")[0];
+  // Queued after the hero, one component per frame, once GSAP has loaded (lib/motion).
+  useMotion(root, ({ gsap, q }) => {
+    const mm = gsap.matchMedia();
+    mm.add(MQ.motion, () => {
+      revealIntro(gsap, root.current!);
+      const frame = q("[data-frame]")[0];
 
-        // Image is unmasked from the right as it travels up the viewport…
-        gsap.fromTo(
-          frame,
-          { clipPath: "inset(0% 0% 0% 100%)" },
-          { clipPath: "inset(0% 0% 0% 0%)", ease: "power1.inOut", scrollTrigger: { trigger: frame, start: "top 92%", end: "top 30%", scrub: 0.5 } },
-        );
-        // …while the photo inside settles from a tight crop and drifts against the scroll.
-        gsap.fromTo(
-          q("[data-media]"),
-          { scale: 1.28, yPercent: -5 },
-          { scale: 1.04, yPercent: 5, ease: "none", scrollTrigger: { trigger: root.current, start: "top bottom", end: "bottom top", scrub: 0.5 } },
-        );
-        gsap.fromTo(
-          q("[data-glow]"),
-          { autoAlpha: 0 },
-          { autoAlpha: 1, ease: "none", scrollTrigger: { trigger: frame, start: "top 60%", end: "center center", scrub: 0.5 } },
-        );
-        gsap.fromTo(
-          q("[data-num]"),
-          { yPercent: 35 },
-          { yPercent: -35, ease: "none", scrollTrigger: { trigger: root.current, start: "top bottom", end: "bottom top", scrub: true } },
-        );
-      });
-    },
-    { scope: root },
-  );
+      // Image is unmasked from the right as it travels up the viewport…
+      gsap.fromTo(
+        frame,
+        { clipPath: "inset(0% 0% 0% 100%)" },
+        { clipPath: "inset(0% 0% 0% 0%)", ease: "power1.inOut", scrollTrigger: { trigger: frame, start: "top 92%", end: "top 30%", scrub: 0.5 } },
+      );
+      // …while the photo inside settles from a tight crop and drifts against the scroll.
+      gsap.fromTo(
+        q("[data-media]"),
+        { scale: 1.28, yPercent: -5 },
+        { scale: 1.04, yPercent: 5, ease: "none", scrollTrigger: { trigger: root.current, start: "top bottom", end: "bottom top", scrub: 0.5 } },
+      );
+      gsap.fromTo(
+        q("[data-glow]"),
+        { autoAlpha: 0 },
+        { autoAlpha: 1, ease: "none", scrollTrigger: { trigger: frame, start: "top 60%", end: "center center", scrub: 0.5 } },
+      );
+      // Crimson hairline picks up where the hero's closing letterbox left off.
+      gsap.fromTo(
+        q("[data-handoff]"),
+        { scaleX: 0 },
+        { scaleX: 1, ease: "none", scrollTrigger: { trigger: root.current, start: "top bottom", end: "top 35%", scrub: 0.5 } },
+      );
+      gsap.fromTo(
+        q("[data-num]"),
+        { yPercent: 35 },
+        { yPercent: -35, ease: "none", scrollTrigger: { trigger: root.current, start: "top bottom", end: "bottom top", scrub: true } },
+      );
+    });
+  });
 
   return (
     <section
@@ -50,11 +53,12 @@ export default function PerformanceSection() {
       ref={root}
       tabIndex={-1}
       aria-labelledby="performance-title"
-      className="relative overflow-hidden border-t border-paper/[0.06] bg-ink py-24 outline-none md:py-36"
+      className="relative overflow-hidden bg-ink py-24 outline-none md:py-36"
     >
-      <div className="grid items-center gap-14 md:grid-cols-12 md:gap-0">
+      <span aria-hidden data-handoff className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-crimson/70 to-transparent" />
+      <div className="grid items-center gap-14 lg:grid-cols-12 lg:gap-0">
         <SectionIntro
-          className="z-10 px-[var(--gutter)] md:col-span-5"
+          className="z-10 px-[var(--gutter)] lg:col-span-5"
           index="01"
           eyebrow="Performance"
           title={["Power", "in motion"]}
@@ -74,14 +78,14 @@ export default function PerformanceSection() {
           </a>
         </SectionIntro>
 
-        <figure className="relative md:col-span-7 md:pr-[var(--gutter)]">
-          <div data-frame className="relative aspect-[4/3] overflow-hidden md:aspect-[16/11]">
-            <div data-media className="absolute inset-0 will-change-transform">
+        <figure className="relative md:max-lg:px-[var(--gutter)] lg:col-span-7 lg:pr-[var(--gutter)]">
+          <div data-frame className="relative aspect-[4/3] overflow-hidden md:aspect-[16/9] lg:aspect-[16/11]">
+            <div data-media className="absolute inset-0">
               <Image
                 src={IMAGES.rearSunset.src}
                 alt={IMAGES.rearSunset.alt}
                 fill
-                sizes="(min-width: 768px) 60vw, 100vw"
+                sizes="(min-width: 768px) 70vw, 130vw"
                 className="object-cover object-[72%_50%]"
               />
             </div>

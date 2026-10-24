@@ -8,6 +8,8 @@ type Props = {
   copy?: string;
   children?: ReactNode;
   className?: string;
+  /** Heading size; narrow columns pass a smaller clamp() so long words aren't clipped. */
+  titleSize?: string;
 };
 
 /**
@@ -15,7 +17,16 @@ type Props = {
  * (data-line / data-fade / data-accent / data-num) are consumed by
  * `revealIntro()` in lib/motion.
  */
-export default function SectionIntro({ index, eyebrow, title, headingId, copy, children, className = "" }: Props) {
+export default function SectionIntro({
+  index,
+  eyebrow,
+  title,
+  headingId,
+  copy,
+  children,
+  className = "",
+  titleSize = "text-[clamp(2rem,4.3vw,4.5rem)]",
+}: Props) {
   return (
     <div className={`relative ${className}`}>
       <span aria-hidden data-num className="t-index block">
@@ -25,7 +36,7 @@ export default function SectionIntro({ index, eyebrow, title, headingId, copy, c
         <span aria-hidden data-accent className="block h-px w-10 origin-left bg-crimson" />
         {eyebrow}
       </p>
-      <h2 id={headingId} className="t-display mt-6 text-[clamp(2rem,4.3vw,4.5rem)]">
+      <h2 id={headingId} className={`t-display mt-6 ${titleSize}`}>
         {title.map((line) => (
           <span key={line} className="line-mask">
             <span data-line className="block">

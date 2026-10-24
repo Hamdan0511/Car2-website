@@ -1,4 +1,8 @@
 import DesignSection from "@/components/DesignSection";
+import DriverCardDialog from "@/components/driver/DriverCardDialog";
+import MissionPanel from "@/components/driver/MissionPanel";
+import MissionToast from "@/components/driver/MissionToast";
+import MissionTracker from "@/components/driver/MissionTracker";
 import EngineeringSection from "@/components/EngineeringSection";
 import Footer from "@/components/Footer";
 import GallerySection from "@/components/GallerySection";
@@ -24,6 +28,11 @@ export default function Home() {
         <GallerySection />
       </main>
       <Footer />
+      {/* FIZZ Driver Experience: optional game layer; the site works without it. */}
+      <MissionTracker />
+      <MissionPanel />
+      <DriverCardDialog />
+      <MissionToast />
       <div aria-hidden className="grain" />
     </MotionRoot>
   );

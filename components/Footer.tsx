@@ -2,39 +2,37 @@
 
 import Image from "next/image";
 import { useRef } from "react";
-import { gsap, MQ, revealIntro, scrollToTarget, useGSAP } from "@/lib/motion";
-import { IMAGES, NAV_LINKS } from "@/lib/site";
+import RedlineStatus from "@/components/driver/RedlineStatus";
+import { MQ, revealIntro, scrollToTarget, useMotion } from "@/lib/motion";
+import { IMAGES, SECTION_LINKS } from "@/lib/site";
 
 export default function Footer() {
   const root = useRef<HTMLElement>(null);
 
-  useGSAP(
-    () => {
-      const q = gsap.utils.selector(root);
-      const mm = gsap.matchMedia();
-      mm.add(MQ.motion, () => {
-        revealIntro(q("[data-head]")[0], "top 80%");
-        const stage = q("[data-stage]")[0];
-        gsap
-          .timeline({ defaults: { ease: "none" }, scrollTrigger: { trigger: stage, start: "top bottom", end: "bottom bottom", scrub: 0.5 } })
-          .fromTo(q("[data-car]"), { scale: 1.35, yPercent: 12 }, { scale: 1, yPercent: 0, duration: 1 }, 0)
-          .fromTo(q("[data-haze]"), { autoAlpha: 0.2 }, { autoAlpha: 1, duration: 1 }, 0);
-        gsap.fromTo(
-          q("[data-wordmark] span"),
-          { yPercent: 100 },
-          { yPercent: 0, stagger: 0.08, duration: 1.4, ease: "expo.out", scrollTrigger: { trigger: q("[data-wordmark]")[0], start: "top 95%", toggleActions: "play none none reverse" } },
-        );
-      });
-    },
-    { scope: root },
-  );
+  // Queued after the hero, one component per frame, once GSAP has loaded (lib/motion).
+  useMotion(root, ({ gsap, q }) => {
+    const mm = gsap.matchMedia();
+    mm.add(MQ.motion, () => {
+      revealIntro(gsap, q("[data-head]")[0], "top 80%");
+      const stage = q("[data-stage]")[0];
+      gsap
+        .timeline({ defaults: { ease: "none" }, scrollTrigger: { trigger: stage, start: "top bottom", end: "bottom bottom", scrub: 0.5 } })
+        .fromTo(q("[data-car]"), { scale: 1.35, yPercent: 12 }, { scale: 1, yPercent: 0, duration: 1 }, 0)
+        .fromTo(q("[data-haze]"), { autoAlpha: 0.2 }, { autoAlpha: 1, duration: 1 }, 0);
+      gsap.fromTo(
+        q("[data-wordmark] span"),
+        { yPercent: 100 },
+        { yPercent: 0, stagger: 0.08, duration: 1.4, ease: "expo.out", scrollTrigger: { trigger: q("[data-wordmark]")[0], start: "top 95%", toggleActions: "play none none reverse" } },
+      );
+    });
+  });
 
   return (
     <footer ref={root} className="relative overflow-hidden bg-ink">
       <section id="redline" tabIndex={-1} aria-labelledby="redline-title" data-stage className="relative flex min-h-svh flex-col outline-none">
         <div data-haze aria-hidden className="absolute inset-0 bg-[radial-gradient(ellipse_70%_60%_at_50%_55%,rgb(120_8_18/0.55),transparent_75%)]" />
         <div aria-hidden className="absolute inset-0 overflow-hidden">
-          <div data-car className="absolute left-1/2 top-[66%] aspect-[2171/724] w-[230vw] -ml-[115vw] -mt-[38vw] will-change-transform md:w-[118vw] md:-ml-[59vw] md:-mt-[19.5vw]">
+          <div data-car className="absolute left-1/2 top-[66%] aspect-[2171/724] w-[230vw] -ml-[115vw] -mt-[38vw] md:w-[118vw] md:-ml-[59vw] md:-mt-[19.5vw]">
             <Image src={IMAGES.redline.src} alt="" fill sizes="(min-width: 768px) 118vw, 230vw" className="object-cover" />
           </div>
           <div className="absolute inset-0 bg-[linear-gradient(180deg,var(--color-ink)_0%,rgb(5_5_5/0.75)_25%,transparent_50%,transparent_75%,var(--color-ink)_100%)]" />
@@ -73,6 +71,8 @@ export default function Footer() {
       </section>
 
       <div className="relative border-t border-paper/10 px-[var(--gutter)] pb-8 pt-14">
+        {/* Driver journey status: below the final shot, never over the car. */}
+        <RedlineStatus />
         <p data-wordmark aria-hidden className="flex justify-between overflow-hidden text-[clamp(4.5rem,21vw,22rem)] font-extralight leading-[0.85] text-paper/90">
           {"FIZZ".split("").map((l, i) => (
             <span key={i} className="block">
@@ -83,7 +83,7 @@ export default function Footer() {
         <div className="mt-12 flex flex-col gap-8 border-t border-paper/10 pt-8 md:flex-row md:items-start md:justify-between">
           <nav aria-label="Footer">
             <ul className="flex flex-wrap gap-x-8 gap-y-3">
-              {NAV_LINKS.map((link) => (
+              {SECTION_LINKS.map((link) => (
                 <li key={link.href}>
                   <a
                     href={link.href}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef } from "react";
-import { gsap, MQ, revealIntro, useGSAP } from "@/lib/motion";
+import { MQ, revealIntro, useMotion } from "@/lib/motion";
 
 // Illustrative design index values for a fictional brand — not measurements.
 const INDEX = [
@@ -14,35 +14,32 @@ const INDEX = [
 export default function EngineeringSection() {
   const root = useRef<HTMLElement>(null);
 
-  useGSAP(
-    () => {
-      const q = gsap.utils.selector(root);
-      const mm = gsap.matchMedia();
-      mm.add(MQ.motion, () => {
-        revealIntro(q("[data-head]")[0]);
+  // Queued after the hero, one component per frame, once GSAP has loaded (lib/motion).
+  useMotion(root, ({ gsap, q }) => {
+    const mm = gsap.matchMedia();
+    mm.add(MQ.motion, () => {
+      revealIntro(gsap, q("[data-head]")[0]);
 
-        // Oversized marquee slides horizontally against the vertical scroll.
-        gsap.fromTo(
-          q("[data-marquee]"),
-          { xPercent: 0 },
-          { xPercent: -30, ease: "none", scrollTrigger: { trigger: root.current, start: "top bottom", end: "bottom top", scrub: 0.5 } },
-        );
+      // Oversized marquee slides horizontally against the vertical scroll.
+      gsap.fromTo(
+        q("[data-marquee]"),
+        { xPercent: 0 },
+        { xPercent: -30, ease: "none", scrollTrigger: { trigger: root.current, start: "top bottom", end: "bottom top", scrub: 0.5 } },
+      );
 
-        // Each row's bar and counter are scrubbed together, so the number
-        // always matches the bar length for any scroll position.
-        q("[data-row]").forEach((row) => {
-          const count = row.querySelector<HTMLElement>("[data-value]")!;
-          const target = Number(count.dataset.value);
-          gsap
-            .timeline({ defaults: { ease: "none" }, scrollTrigger: { trigger: row, start: "top 88%", end: "top 48%", scrub: 0.4 } })
-            .fromTo(row.querySelector("[data-bar]"), { scaleX: 0 }, { scaleX: target / 100 }, 0)
-            .fromTo(count, { textContent: 0 }, { textContent: target, snap: { textContent: 1 } }, 0);
-          gsap.fromTo(row, { autoAlpha: 0, y: 30 }, { autoAlpha: 1, y: 0, duration: 1, ease: "expo.out", scrollTrigger: { trigger: row, start: "top 90%", toggleActions: "play none none reverse" } });
-        });
+      // Each row's bar and counter are scrubbed together, so the number
+      // always matches the bar length for any scroll position.
+      q("[data-row]").forEach((row) => {
+        const count = row.querySelector<HTMLElement>("[data-value]")!;
+        const target = Number(count.dataset.value);
+        gsap
+          .timeline({ defaults: { ease: "none" }, scrollTrigger: { trigger: row, start: "top 88%", end: "top 48%", scrub: 0.4 } })
+          .fromTo(row.querySelector("[data-bar]"), { scaleX: 0 }, { scaleX: target / 100 }, 0)
+          .fromTo(count, { textContent: 0 }, { textContent: target, snap: { textContent: 1 } }, 0);
+        gsap.fromTo(row, { autoAlpha: 0, y: 30 }, { autoAlpha: 1, y: 0, duration: 1, ease: "expo.out", scrollTrigger: { trigger: row, start: "top 90%", toggleActions: "play none none reverse" } });
       });
-    },
-    { scope: root },
-  );
+    });
+  });
 
   return (
     <section

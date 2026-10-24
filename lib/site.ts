@@ -6,6 +6,14 @@ export const NAV_LINKS = [
   { href: "#gallery", label: "Gallery" },
 ] as const;
 
+/** Every navigable section, in page order (mobile menu and footer). */
+export const SECTION_LINKS = [
+  ...NAV_LINKS.slice(0, 4),
+  { href: "#engineering", label: "Engineering" },
+  NAV_LINKS[4],
+  { href: "#redline", label: "Redline" },
+] as const;
+
 export const IMAGES = {
   heroSilver: {
     src: "/images/fizz-hero-silver.webp",

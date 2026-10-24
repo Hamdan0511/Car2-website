@@ -2,7 +2,8 @@
 
 import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { gsap, MQ, revealIntro, useGSAP } from "@/lib/motion";
+import { MQ, revealIntro, useMotion } from "@/lib/motion";
+import { driver } from "@/lib/driverStore";
 import { IMAGES } from "@/lib/site";
 
 const PLATES = [
@@ -17,29 +18,27 @@ export default function GallerySection() {
   const dialog = useRef<HTMLDialogElement>(null);
   const [open, setOpen] = useState<number | null>(null);
 
-  useGSAP(
-    () => {
-      const q = gsap.utils.selector(root);
-      const mm = gsap.matchMedia();
-      mm.add(MQ.motion, () => {
-        revealIntro(q("[data-head]")[0]);
-        q("[data-plate]").forEach((plate) => {
-          const clip = plate.querySelector("[data-clip]");
-          const media = plate.querySelector("[data-parallax]");
-          gsap.fromTo(
-            clip,
-            { clipPath: "inset(100% 0% 0% 0%)" },
-            { clipPath: "inset(0% 0% 0% 0%)", duration: 1.4, ease: "expo.inOut", scrollTrigger: { trigger: plate, start: "top 85%", toggleActions: "play none none reverse" } },
-          );
-          gsap.fromTo(media, { yPercent: -6 }, { yPercent: 6, ease: "none", scrollTrigger: { trigger: plate, start: "top bottom", end: "bottom top", scrub: 0.5 } });
-        });
+  // Queued after the hero, one component per frame, once GSAP has loaded (lib/motion).
+  useMotion(root, ({ gsap, q }) => {
+    const mm = gsap.matchMedia();
+    mm.add(MQ.motion, () => {
+      revealIntro(gsap, q("[data-head]")[0]);
+      q("[data-plate]").forEach((plate) => {
+        const clip = plate.querySelector("[data-clip]");
+        const media = plate.querySelector("[data-parallax]");
+        gsap.fromTo(
+          clip,
+          { clipPath: "inset(100% 0% 0% 0%)" },
+          { clipPath: "inset(0% 0% 0% 0%)", duration: 1.4, ease: "expo.inOut", scrollTrigger: { trigger: plate, start: "top 85%", toggleActions: "play none none reverse" } },
+        );
+        gsap.fromTo(media, { yPercent: -6 }, { yPercent: 6, ease: "none", scrollTrigger: { trigger: plate, start: "top bottom", end: "bottom top", scrub: 0.5 } });
       });
-    },
-    { scope: root },
-  );
+    });
+  });
 
   const show = useCallback((i: number) => {
     setOpen(i);
+    driver.completeMission("gallery"); // Mission 05 — idempotent
     if (!dialog.current?.open) dialog.current?.showModal();
   }, []);
 
@@ -123,23 +122,32 @@ export default function GallerySection() {
         ref={dialog}
         aria-label={current ? `Plate 0${(open ?? 0) + 1}: ${current.title}` : "Gallery viewer"}
         onClick={(e) => e.target === dialog.current && dialog.current.close()}
-        className="m-auto max-h-none max-w-none bg-transparent p-0 text-paper backdrop:bg-ink/95"
+        className="viewer m-auto bg-transparent text-paper backdrop:bg-ink/95"
       >
         {current && (
-          <div className="flex w-[94vw] max-w-[1600px] flex-col gap-5">
-            <div className="flex items-center justify-between">
-              <p className="t-micro">
+          <div className="flex w-full flex-col gap-4">
+            <div className="flex items-center justify-between gap-4">
+              <p className="t-micro leading-relaxed">
                 <span className="text-crimson">Plate 0{(open ?? 0) + 1}</span>
                 <span className="mx-3 text-muted">/</span>
                 {current.title} — <span className="text-muted">{current.meta}</span>
               </p>
-              <button type="button" autoFocus onClick={() => dialog.current?.close()} className="t-micro px-2 py-2 hover:text-crimson">
+              <button type="button" autoFocus onClick={() => dialog.current?.close()} className="t-micro -mr-2 min-h-11 shrink-0 px-3 hover:text-crimson">
                 Close ✕
               </button>
             </div>
-            <div className="relative aspect-[3/1] w-full bg-graphite">
-              <Image key={current.image.src} src={current.image.src} alt={current.image.alt} fill sizes="94vw" className="object-contain" />
-            </div>
+            <Image
+              key={current.image.src}
+              src={current.image.src}
+              alt={current.image.alt}
+              width={current.image.width}
+              height={current.image.height}
+              sizes="(min-width: 1700px) 1600px, 96vw"
+              // Width is capped by the height the viewer chrome leaves free, times the
+              // photo's own aspect ratio: never overflows short screens, never letterboxes.
+              style={{ maxWidth: `calc(var(--viewer-free-h) * ${current.image.width / current.image.height})` }}
+              className="mx-auto block h-auto w-full"
+            />
             <div className="flex justify-between">
               <button type="button" onClick={() => step(-1)} className="btn-line">
                 <span aria-hidden>←</span> Previous

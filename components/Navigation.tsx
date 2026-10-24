@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState, type MouseEvent } from "react";
-import { gsap, MQ, ScrollTrigger, scrollToTarget, useGSAP } from "@/lib/motion";
-import { NAV_LINKS } from "@/lib/site";
+import { useEffect, useRef, useState, type CSSProperties, type MouseEvent } from "react";
+import { MQ, scrollToTarget, useMotion, whenMotionReady } from "@/lib/motion";
+import DriverButton from "@/components/driver/DriverButton";
+import { NAV_LINKS, SECTION_LINKS } from "@/lib/site";
 
-const SECTION_IDS = ["home", "performance", "design", "technology", "engineering", "gallery", "redline"];
+const SECTION_IDS = SECTION_LINKS.map((l) => l.href.slice(1));
 
 export default function Navigation() {
   const header = useRef<HTMLElement>(null);
@@ -29,46 +30,55 @@ export default function Navigation() {
     return () => observer.disconnect();
   }, []);
 
-  useGSAP(
-    () => {
-      const q = gsap.utils.selector(header);
-
-      // Absolute start/end values keep these triggers independent of pin order.
-      gsap.fromTo(
-        q("[data-progress]"),
-        { scaleX: 0 },
-        { scaleX: 1, ease: "none", scrollTrigger: { start: 0, end: "max", scrub: 0.3 } },
-      );
-      ScrollTrigger.create({
-        start: 80,
-        end: "max",
-        toggleClass: { targets: header.current, className: "is-scrolled" },
-      });
-
-      const mm = gsap.matchMedia();
-      mm.add(MQ.motion, () => {
-        gsap
-          .timeline({ delay: 0.35, defaults: { ease: "expo.out", duration: 1.2 } })
-          .fromTo(q("[data-brand-letter]"), { autoAlpha: 0, yPercent: 60 }, { autoAlpha: 1, yPercent: 0, stagger: 0.07 })
-          .fromTo(q("[data-nav-item]"), { autoAlpha: 0, y: -10 }, { autoAlpha: 1, y: 0, stagger: 0.06 }, 0.5);
-      });
-    },
-    { scope: header },
+  // Page-wide triggers ("max" = full scroll height) are created only once every
+  // queued section has added its pin spacer. The entrance itself is CSS.
+  useMotion(header, ({ q, ctx }) =>
+    whenMotionReady(({ gsap, ScrollTrigger }) =>
+      ctx.add(() => {
+        gsap.fromTo(
+          q("[data-progress]"),
+          { scaleX: 0 },
+          { scaleX: 1, ease: "none", scrollTrigger: { start: 0, end: "max", scrub: 0.3 } },
+        );
+        ScrollTrigger.create({
+          start: 80,
+          end: "max",
+          toggleClass: { targets: header.current!, className: "is-scrolled" },
+        });
+      }),
+    ),
   );
 
-  // Mobile menu: Escape closes, focus moves into the panel and back out again.
+  // Mobile menu: Escape closes, Tab is contained, focus moves into the panel
+  // and back out again. Crossing into the desktop layout closes it, otherwise
+  // the scroll lock would outlive the (now hidden) panel.
   useEffect(() => {
     if (!menuOpen) return;
     const panel = menuPanel.current;
     const button = menuButton.current;
     panel?.querySelector<HTMLElement>("a")?.focus();
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setMenuOpen(false);
+
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMenuOpen(false);
+      if (e.key !== "Tab" || !panel || !button) return;
+      const items = [button, ...panel.querySelectorAll<HTMLElement>("a")];
+      const i = items.indexOf(document.activeElement as HTMLElement);
+      const next = e.shiftKey ? (i <= 0 ? items.length - 1 : i - 1) : i === items.length - 1 ? 0 : i + 1;
+      e.preventDefault();
+      items[next].focus();
+    };
+    // Must match the lg: breakpoint at which the inline nav replaces the menu.
+    const desktop = window.matchMedia(MQ.navInline);
+    const onBreakpoint = () => desktop.matches && setMenuOpen(false);
+
     document.addEventListener("keydown", onKey);
+    desktop.addEventListener("change", onBreakpoint);
     document.documentElement.style.overflow = "hidden";
     return () => {
       document.removeEventListener("keydown", onKey);
+      desktop.removeEventListener("change", onBreakpoint);
       document.documentElement.style.overflow = "";
-      button?.focus({ preventScroll: true });
+      if (!desktop.matches) button?.focus({ preventScroll: true });
     };
   }, [menuOpen]);
 
@@ -79,7 +89,7 @@ export default function Navigation() {
     requestAnimationFrame(() => scrollToTarget(href));
   };
 
-  const activeHref = `#${active === "engineering" ? "performance" : active === "redline" ? "gallery" : active}`;
+  const activeHref = `#${active}`;
 
   return (
     <header ref={header} className="fixed inset-x-0 top-0 z-50">
@@ -89,7 +99,7 @@ export default function Navigation() {
         className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-ink/95 via-ink/70 to-transparent opacity-0 transition-opacity duration-700"
       />
       <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-paper/5">
-        <div data-progress className="h-full origin-left bg-crimson" />
+        <div data-progress className="h-full origin-left bg-crimson" style={{ transform: "scaleX(0)" }} />
       </div>
 
       <nav aria-label="Primary" className="relative flex h-16 items-center justify-between px-[var(--gutter)] md:h-20">
@@ -100,17 +110,17 @@ export default function Navigation() {
           className="flex gap-[0.55em] text-[0.95rem] font-medium tracking-[0.1em] text-paper"
         >
           {"FIZZ".split("").map((letter, i) => (
-            <span key={i} data-brand-letter data-intro className="inline-block">
+            <span key={i} data-intro="letter" className="inline-block" style={{ "--i": i } as CSSProperties}>
               {letter}
             </span>
           ))}
         </a>
 
-        <ul className="hidden items-center gap-9 lg:gap-12 md:flex">
-          {NAV_LINKS.map((link) => {
+        <ul className="hidden items-center gap-9 lg:flex xl:gap-12">
+          {NAV_LINKS.map((link, i) => {
             const isActive = activeHref === link.href;
             return (
-              <li key={link.href} data-nav-item data-intro>
+              <li key={link.href} data-intro="nav" style={{ "--i": i } as CSSProperties}>
                 <a
                   href={link.href}
                   onClick={(e) => go(e, link.href)}
@@ -132,12 +142,20 @@ export default function Navigation() {
           })}
         </ul>
 
+        <div className="flex items-center gap-3 sm:gap-5">
+        {/* Driver HUD gauge (JS feature). Hidden while the mobile menu is open so
+            the menu's focus loop stays self-contained. */}
+        {!menuOpen && (
+          <div data-intro="nav" style={{ "--i": 6 } as CSSProperties}>
+            <DriverButton />
+          </div>
+        )}
         <a
           href="#gallery"
           onClick={(e) => go(e, "#gallery")}
-          data-nav-item
-          data-intro
-          className="t-micro hidden items-center gap-3 rounded-full border border-paper/25 px-5 py-2.5 text-paper transition-colors duration-500 hover:border-crimson md:inline-flex"
+          data-intro="nav"
+          style={{ "--i": 5 } as CSSProperties}
+          className="t-micro hidden items-center gap-3 rounded-full border border-paper/25 px-5 py-2.5 text-paper transition-colors duration-500 hover:border-crimson lg:inline-flex"
         >
           Explore <span aria-hidden>↗</span>
         </a>
@@ -145,12 +163,12 @@ export default function Navigation() {
         <button
           ref={menuButton}
           type="button"
-          data-nav-item
-          data-intro
+          data-intro="nav"
+          style={{ "--i": 1 } as CSSProperties}
           aria-expanded={menuOpen}
           aria-controls="mobile-menu"
           onClick={() => setMenuOpen((v) => !v)}
-          className="t-micro relative z-10 flex items-center gap-3 py-2 text-paper md:hidden"
+          className="t-micro relative z-10 flex min-h-11 items-center gap-3 text-paper lg:hidden"
         >
           {menuOpen ? "Close" : "Menu"}
           <span aria-hidden className="flex w-5 flex-col gap-[5px]">
@@ -158,25 +176,26 @@ export default function Navigation() {
             <span className={`h-px bg-paper transition-transform duration-500 ${menuOpen ? "-translate-y-[3px] -rotate-45" : ""}`} />
           </span>
         </button>
+        </div>
       </nav>
 
       <div
         id="mobile-menu"
         ref={menuPanel}
         hidden={!menuOpen}
-        className="fixed inset-0 bg-ink px-[var(--gutter)] pt-28 md:hidden"
+        className="fixed inset-0 overflow-y-auto bg-ink px-[var(--gutter)] pt-24 pb-10 lg:hidden"
       >
         <ul className="flex flex-col">
-          {NAV_LINKS.map((link, i) => (
+          {SECTION_LINKS.map((link, i) => (
             <li key={link.href} className="border-b border-paper/10">
               <a
                 href={link.href}
                 onClick={(e) => go(e, link.href)}
                 aria-current={activeHref === link.href ? "location" : undefined}
-                className="flex items-baseline gap-5 py-5 text-paper"
+                className="flex items-baseline gap-5 py-4 text-paper"
               >
                 <span className="t-micro text-crimson">0{i + 1}</span>
-                <span className="text-2xl font-light uppercase tracking-[0.24em]">{link.label}</span>
+                <span className="text-xl font-light uppercase tracking-[0.24em] min-[380px]:text-2xl">{link.label}</span>
               </a>
             </li>
           ))}
